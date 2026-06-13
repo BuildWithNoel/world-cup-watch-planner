@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Cup Watch Planner 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+<style>
+:root{
+  --pitch:#0B2E22;
+  --turf:#15543C;
+  --turf-light:#1F6E4A;
+  --gold:#F4C95D;
+  --gold-dark:#D9A53B;
+  --chalk:#F7F5F0;
+  --ink:#11201B;
+  --muted:#5C7268;
+  --watch:#2FAE66;
+  --miss:#E2543A;
+  --line:rgba(17,32,27,0.10);
+  --card:#FFFFFF;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--chalk);
+  color:var(--ink);
+  line-height:1.4;
+}
+h1,h2,h3,.flap,.scoreline{font-family:'Oswald',sans-serif;}
+.container{max-width:1080px;margin:0 auto;padding:0 16px 60px;}
+
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:var(--pitch);
+  color:var(--chalk);
+  padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+  border-bottom:3px solid var(--gold);
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand .ball{font-size:1.6rem;}
+.brand-text{display:flex;flex-direction:column;}
+.brand-text strong{font-family:'Oswald',sans-serif;font-size:1.15rem;letter-spacing:.5px;text-transform:uppercase;}
+.brand-text span{font-size:.72rem;color:var(--gold);letter-spacing:.5px;}
+.tz-wrap{display:flex;align-items:center;gap:8px;}
+.tz-wrap label{font-size:.78rem;color:var(--gold);white-space:nowrap;}
+#tz-select{
+  background:var(--turf);color:var(--chalk);border:1px solid var(--turf-light);
+  border-radius:6px;padding:8px 10px;font-size:.85rem;font-family:'Inter',sans-serif;
+  max-width:280px;
+}
+
+/* HERO */
+.hero{
+  background:linear-gradient(135deg,var(--turf) 0%, var(--pitch) 100%);
+  color:var(--chalk);
+  border-radius:14px;
+  margin-top:18px;
+  padding:28px 22px;
+  display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;
+}
+.hero-text h1{font-size:1.7rem;margin:0 0 8px;letter-spacing:.5px;}
+.hero-text p{margin:0;color:#CFE6DA;max-width:480px;font-size:.92rem;}
+.flap-block{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.flap-board{display:flex;gap:5px;}
+.flap{
+  background:var(--ink);color:var(--gold);
+  font-size:2.2rem;font-weight:600;
+  width:2.1rem;height:2.9rem;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:5px;position:relative;overflow:hidden;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.35);
+  animation:flipDown .35s ease;
+}
+.flap.thin{width:1.1rem;font-size:1.8rem;}
+.flap::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.45);}
+@keyframes flipDown{
+  0%{transform:rotateX(-90deg);opacity:.3;}
+  100%{transform:rotateX(0deg);opacity:1;}
+}
+.flap-label{font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);}
+
+/* ONBOARDING */
+.section-title{font-size:1.1rem;margin:28px 0 12px;display:flex;align-items:center;gap:8px;}
+.section-title .num{
+  background:var(--gold);color:var(--ink);font-family:'Oswald',sans-serif;
+  width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;font-weight:700;
+}
+.mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.mode-card{
+  background:var(--card);border:2px solid var(--line);border-radius:12px;padding:16px;
+  cursor:pointer;transition:border-color .15s,transform .1s;
+}
+.mode-card:hover{border-color:var(--turf-light);}
+.mode-card.active{border-color:var(--turf);background:#EEF6F1;}
+.mode-card h3{margin:0 0 6px;font-size:1rem;display:flex;align-items:center;gap:8px;}
+.mode-card p{margin:0;font-size:.82rem;color:var(--muted);}
+.mode-card .check{
+  width:18px;height:18px;border-radius:50%;border:2px solid var(--muted);
+  display:inline-block;flex-shrink:0;
+}
+.mode-card.active .check{background:var(--turf);border-color:var(--turf);position:relative;}
+.mode-card.active .check::after{
+  content:'✓';position:absolute;inset:0;color:#fff;font-size:.7rem;display:flex;align-items:center;justify-content:center;
+}
+
+.subpanel{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:12px;
+}
+.sleep-toggle{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.pill-btn{
+  border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;
+  font-size:.85rem;font-weight:600;cursor:pointer;color:var(--ink);font-family:'Inter',sans-serif;
+}
+.pill-btn.active{background:var(--turf);color:#fff;border-color:var(--turf);}
+.sleep-times{display:flex;gap:24px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);}
+.sleep-times b{color:var(--ink);}
+
+.custom-table{width:100%;border-collapse:collapse;font-size:.85rem;}
+.custom-table th{text-align:left;color:var(--muted);font-weight:600;padding:6px 8px;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;}
+.custom-table td{padding:6px 8px;border-top:1px solid var(--line);}
+.custom-table input[type=time]{
+  border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-family:'Inter',sans-serif;font-size:.85rem;width:100%;
+}
+
+/* SUMMARY */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.stat-card{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;
+}
+.stat-card .val{font-family:'Oswald',sans-serif;font-size:1.7rem;font-weight:700;}
+.stat-card .val.watch{color:var(--watch);}
+.stat-card .val.miss{color:var(--miss);}
+.stat-card .lbl{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+
+.insights{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.insight{
+  background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold-dark);
+  border-radius:8px;padding:10px 14px;font-size:.88rem;
+}
+
+.collapse-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+details.match-collapse{
+  flex:1;min-width:240px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+}
+details.match-collapse summary{cursor:pointer;font-weight:600;font-size:.88rem;}
+details.match-collapse summary .tag{font-weight:400;color:var(--muted);}
+.collapse-list{margin:8px 0 2px;padding:0;list-style:none;max-height:220px;overflow:auto;font-size:.8rem;}
+.collapse-list li{padding:4px 0;border-top:1px solid var(--line);color:var(--muted);}
+.collapse-list li span{color:var(--ink);}
+
+/* CONTROLS */
+.controls{
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:24px;
+}
+.controls input[type=text],.controls input[type=date],.controls select{
+  border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:.85rem;font-family:'Inter',sans-serif;
+}
+.controls input[type=text]{flex:1;min-width:160px;}
+.controls .field-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;}
+.controls .field{display:flex;flex-direction:column;}
+.controls .clear-btn{
+  background:none;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:.8rem;cursor:pointer;color:var(--muted);
+  align-self:flex-end;
+}
+
+/* MATCH LIST */
+.date-heading{
+  font-family:'Oswald',sans-serif;font-size:.95rem;text-transform:uppercase;letter-spacing:1px;
+  color:var(--turf);margin:22px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--line);
+}
+.match-card{
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  border-left:5px solid var(--turf-light);
+}
+.match-card.knockout{border-left-color:var(--gold-dark);}
+.match-card .time-block{
+  font-family:'Oswald',sans-serif;font-weight:600;text-align:center;min-width:78px;
+}
+.match-card .time-block .time{font-size:1.15rem;}
+.match-card .time-block .utc{font-size:.68rem;color:var(--muted);font-family:'Inter',sans-serif;}
+.match-card .teams{flex:1;min-width:160px;}
+.match-card .teams .vs{font-weight:700;font-size:1rem;}
+.match-card .venue{font-size:.78rem;color:var(--muted);margin-top:2px;}
+.stage-badge{
+  font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;font-weight:700;
+  padding:3px 8px;border-radius:999px;background:var(--turf);color:#fff;white-space:nowrap;
+}
+.stage-badge.knockout{background:var(--gold-dark);color:#1a1500;}
+.watch-flag{
+  display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;white-space:nowrap;
+}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.dot.watch{background:var(--watch);}
+.dot.miss{background:var(--miss);}
+.checkbox-wrap{display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;white-space:nowrap;cursor:pointer;}
+.checkbox-wrap input{width:18px;height:18px;accent-color:var(--turf);cursor:pointer;}
+
+.empty-msg{text-align:center;color:var(--muted);padding:40px 0;font-size:.9rem;}
+
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;}
+footer a{color:var(--turf);}
+
+@media (max-width:600px){
+  .hero{flex-direction:column;align-items:flex-start;}
+  .flap{font-size:1.7rem;width:1.7rem;height:2.3rem;}
+  .flap.thin{width:0.9rem;font-size:1.4rem;}
+  .match-card{flex-direction:row;}
+  .match-card .teams{order:1;width:100%;}
+  .match-card .time-block{order:0;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ================= DATA ================= */
+const rawMatches = [
+[1,"Mexico","South Africa","2026-06-11T19:00:00Z","Estadio Azteca","Mexico City","Group Stage","A"],
+[2,"South Korea","Czechia","2026-06-12T02:00:00Z","Estadio Akron","Guadalajara","Group Stage","A"],
+[3,"Czechia","South Africa","2026-06-18T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Group Stage","A"],
+[4,"Mexico","South Korea","2026-06-19T01:00:00Z","Estadio Akron","Guadalajara","Group Stage","A"],
+[5,"Czechia","Mexico","2026-06-25T01:00:00Z","Estadio Azteca","Mexico City","Group Stage","A"],
+[6,"South Africa","South Korea","2026-06-25T01:00:00Z","Estadio BBVA","Monterrey","Group Stage","A"],
+
+[7,"Canada","Bosnia and Herzegovina","2026-06-12T19:00:00Z","BMO Field","Toronto","Group Stage","B"],
+[8,"Qatar","Switzerland","2026-06-13T19:00:00Z","Levi's Stadium","San Francisco Bay Area","Group Stage","B"],
+[9,"Switzerland","Bosnia and Herzegovina","2026-06-18T19:00:00Z","SoFi Stadium","Los Angeles","Group Stage","B"],
+[10,"Canada","Qatar","2026-06-18T22:00:00Z","BC Place","Vancouver","Group Stage","B"],
+[11,"Switzerland","Canada","2026-06-24T19:00:00Z","BC Place","Vancouver","Group Stage","B"],
+[12,"Bosnia and Herzegovina","Qatar","2026-06-24T19:00:00Z","Lumen Field","Seattle","Group Stage","B"],
+
+[13,"Brazil","Morocco","2026-06-13T22:00:00Z","MetLife Stadium","New York/New Jersey","Group Stage","C"],
+[14,"Haiti","Scotland","2026-06-14T01:00:00Z","Gillette Stadium","Boston","Group Stage","C"],
+[15,"Scotland","Morocco","2026-06-19T22:00:00Z","Gillette Stadium","Boston","Group Stage","C"],
+[16,"Brazil","Haiti","2026-06-20T01:00:00Z","Lincoln Financial Field","Philadelphia","Group Stage","C"],
+[17,"Scotland","Brazil","2026-06-24T22:00:00Z","Hard Rock Stadium","Miami","Group Stage","C"],
+[18,"Morocco","Haiti","2026-06-24T22:00:00Z","Mercedes-Benz Stadium","Atlanta","Group Stage","C"],
+
+[19,"USA","Paraguay","2026-06-13T01:00:00Z","SoFi Stadium","Los Angeles","Group Stage","D"],
+[20,"Australia","Turkiye","2026-06-13T04:00:00Z","BC Place","Vancouver","Group Stage","D"],
+[21,"USA","Australia","2026-06-19T19:00:00Z","Lumen Field","Seattle","Group Stage","D"],
+[22,"Turkiye","Paraguay","2026-06-19T04:00:00Z","Levi's Stadium","San Francisco Bay Area","Group Stage","D"],
+[23,"Turkiye","USA","2026-06-26T02:00:00Z","SoFi Stadium","Los Angeles","Group Stage","D"],
+[24,"Paraguay","Australia","2026-06-26T02:00:00Z","Levi's Stadium","San Francisco Bay Area","Group Stage","D"],
+
+[25,"Germany","Curacao","2026-06-14T17:00:00Z","NRG Stadium","Houston","Group Stage","E"],
+[26,"Ivory Coast","Ecuador","2026-06-14T23:00:00Z","Lincoln Financial Field","Philadelphia","Group Stage","E"],
+[27,"Germany","Ivory Coast","2026-06-20T20:00:00Z","BMO Field","Toronto","Group Stage","E"],
+[28,"Ecuador","Curacao","2026-06-21T00:00:00Z","Arrowhead Stadium","Kansas City","Group Stage","E"],
+[29,"Ecuador","Germany","2026-06-25T20:00:00Z","MetLife Stadium","New York/New Jersey","Group Stage","E"],
+[30,"Curacao","Ivory Coast","2026-06-25T20:00:00Z","Lincoln Financial Field","Philadelphia","Group Stage","E"],
+
+[31,"Netherlands","Japan","2026-06-14T20:00:00Z","AT&T Stadium","Dallas","Group Stage","F"],
+[32,"Sweden","Tunisia","2026-06-15T02:00:00Z","Estadio BBVA","Monterrey","Group Stage","F"],
+[33,"Netherlands","Sweden","2026-06-20T17:00:00Z","NRG Stadium","Houston","Group Stage","F"],
+[34,"Tunisia","Japan","2026-06-20T04:00:00Z","Estadio BBVA","Monterrey","Group Stage","F"],
+[35,"Japan","Sweden","2026-06-25T23:00:00Z","AT&T Stadium","Dallas","Group Stage","F"],
+[36,"Tunisia","Netherlands","2026-06-25T23:00:00Z","Arrowhead Stadium","Kansas City","Group Stage","F"],
+
+[37,"Iran","New Zealand","2026-06-16T01:00:00Z","SoFi Stadium","Los Angeles","Group Stage","G"],
+[38,"Belgium","Egypt","2026-06-15T19:00:00Z","Lumen Field","Seattle","Group Stage","G"],
+[39,"Belgium","Iran","2026-06-21T19:00:00Z","SoFi Stadium","Los Angeles","Group Stage","G"],
+[40,"New Zealand","Egypt","2026-06-22T01:00:00Z","BC Place","Vancouver","Group Stage","G"],
+[41,"Egypt","Iran","2026-06-27T03:00:00Z","Lumen Field","Seattle","Group Stage","G"],
+[42,"New Zealand","Belgium","2026-06-27T03:00:00Z","BC Place","Vancouver","Group Stage","G"],
+
+[43,"Spain","Cape Verde","2026-06-15T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Group Stage","H"],
+[44,"Saudi Arabia","Uruguay","2026-06-15T22:00:00Z","Hard Rock Stadium","Miami","Group Stage","H"],
+[45,"Spain","Saudi Arabia","2026-06-21T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Group Stage","H"],
+[46,"Uruguay","Cape Verde","2026-06-21T22:00:00Z","Hard Rock Stadium","Miami","Group Stage","H"],
+[47,"Cape Verde","Saudi Arabia","2026-06-27T00:00:00Z","NRG Stadium","Houston","Group Stage","H"],
+[48,"Uruguay","Spain","2026-06-27T00:00:00Z","Estadio Akron","Guadalajara","Group Stage","H"],
+
+[49,"France","Senegal","2026-06-16T19:00:00Z","MetLife Stadium","New York/New Jersey","Group Stage","I"],
+[50,"Iraq","Norway","2026-06-16T22:00:00Z","Gillette Stadium","Boston","Group Stage","I"],
+[51,"France","Iraq","2026-06-22T21:00:00Z","Lincoln Financial Field","Philadelphia","Group Stage","I"],
+[52,"Norway","Senegal","2026-06-23T00:00:00Z","MetLife Stadium","New York/New Jersey","Group Stage","I"],
+[53,"Norway","France","2026-06-26T19:00:00Z","Gillette Stadium","Boston","Group Stage","I"],
+[54,"Senegal","Iraq","2026-06-26T19:00:00Z","BMO Field","Toronto","Group Stage","I"],
+
+[55,"Argentina","Algeria","2026-06-17T01:00:00Z","Arrowhead Stadium","Kansas City","Group Stage","J"],
+[56,"Austria","Jordan","2026-06-16T04:00:00Z","Levi's Stadium","San Francisco Bay Area","Group Stage","J"],
+[57,"Argentina","Austria","2026-06-22T17:00:00Z","AT&T Stadium","Dallas","Group Stage","J"],
+[58,"Jordan","Algeria","2026-06-23T03:00:00Z","Levi's Stadium","San Francisco Bay Area","Group Stage","J"],
+[59,"Algeria","Austria","2026-06-28T02:00:00Z","Arrowhead Stadium","Kansas City","Group Stage","J"],
+[60,"Jordan","Argentina","2026-06-28T02:00:00Z","AT&T Stadium","Dallas","Group Stage","J"],
+
+[61,"Portugal","DR Congo","2026-06-17T17:00:00Z","NRG Stadium","Houston","Group Stage","K"],
+[62,"Uzbekistan","Colombia","2026-06-18T02:00:00Z","Estadio Azteca","Mexico City","Group Stage","K"],
+[63,"Portugal","Uzbekistan","2026-06-23T17:00:00Z","NRG Stadium","Houston","Group Stage","K"],
+[64,"Colombia","DR Congo","2026-06-24T02:00:00Z","Estadio Akron","Guadalajara","Group Stage","K"],
+[65,"Colombia","Portugal","2026-06-27T23:30:00Z","Hard Rock Stadium","Miami","Group Stage","K"],
+[66,"DR Congo","Uzbekistan","2026-06-27T23:30:00Z","Mercedes-Benz Stadium","Atlanta","Group Stage","K"],
+
+[67,"England","Croatia","2026-06-17T20:00:00Z","AT&T Stadium","Dallas","Group Stage","L"],
+[68,"Ghana","Panama","2026-06-17T23:00:00Z","BMO Field","Toronto","Group Stage","L"],
+[69,"England","Ghana","2026-06-23T20:00:00Z","Gillette Stadium","Boston","Group Stage","L"],
+[70,"Panama","Croatia","2026-06-23T23:00:00Z","BMO Field","Toronto","Group Stage","L"],
+[71,"Panama","England","2026-06-27T21:00:00Z","MetLife Stadium","New York/New Jersey","Group Stage","L"],
+[72,"Croatia","Ghana","2026-06-27T21:00:00Z","Lincoln Financial Field","Philadelphia","Group Stage","L"],
+
+[73,"TBD","TBD","2026-06-28T16:00:00Z","NRG Stadium","Houston","Round of 32",null],
+[74,"TBD","TBD","2026-06-28T19:00:00Z","SoFi Stadium","Los Angeles","Round of 32",null],
+[75,"TBD","TBD","2026-06-28T23:00:00Z","MetLife Stadium","New York/New Jersey","Round of 32",null],
+[76,"TBD","TBD","2026-06-29T16:00:00Z","Estadio Azteca","Mexico City","Round of 32",null],
+[77,"TBD","TBD","2026-06-29T20:00:00Z","Gillette Stadium","Boston","Round of 32",null],
+[78,"TBD","TBD","2026-06-30T00:00:00Z","Estadio BBVA","Monterrey","Round of 32",null],
+[79,"TBD","TBD","2026-06-30T16:00:00Z","Lincoln Financial Field","Philadelphia","Round of 32",null],
+[80,"TBD","TBD","2026-06-30T20:00:00Z","AT&T Stadium","Dallas","Round of 32",null],
+[81,"TBD","TBD","2026-07-01T00:00:00Z","Arrowhead Stadium","Kansas City","Round of 32",null],
+[82,"TBD","TBD","2026-07-01T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Round of 32",null],
+[83,"TBD","TBD","2026-07-01T20:00:00Z","Hard Rock Stadium","Miami","Round of 32",null],
+[84,"TBD","TBD","2026-07-02T00:00:00Z","Levi's Stadium","San Francisco Bay Area","Round of 32",null],
+[85,"TBD","TBD","2026-07-02T16:00:00Z","Lumen Field","Seattle","Round of 32",null],
+[86,"TBD","TBD","2026-07-02T20:00:00Z","BC Place","Vancouver","Round of 32",null],
+[87,"TBD","TBD","2026-07-03T00:00:00Z","BMO Field","Toronto","Round of 32",null],
+[88,"TBD","TBD","2026-07-03T20:00:00Z","Estadio Akron","Guadalajara","Round of 32",null],
+
+[89,"TBD","TBD","2026-07-04T16:00:00Z","NRG Stadium","Houston","Round of 16",null],
+[90,"TBD","TBD","2026-07-04T20:00:00Z","AT&T Stadium","Dallas","Round of 16",null],
+[91,"TBD","TBD","2026-07-05T16:00:00Z","MetLife Stadium","New York/New Jersey","Round of 16",null],
+[92,"TBD","TBD","2026-07-05T20:00:00Z","Hard Rock Stadium","Miami","Round of 16",null],
+[93,"TBD","TBD","2026-07-06T16:00:00Z","SoFi Stadium","Los Angeles","Round of 16",null],
+[94,"TBD","TBD","2026-07-06T20:00:00Z","Lumen Field","Seattle","Round of 16",null],
+[95,"TBD","TBD","2026-07-07T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Round of 16",null],
+[96,"TBD","TBD","2026-07-07T20:00:00Z","Arrowhead Stadium","Kansas City","Round of 16",null],
+
+[97,"TBD","TBD","2026-07-09T19:00:00Z","Gillette Stadium","Boston","Quarter Final",null],
+[98,"TBD","TBD","2026-07-10T19:00:00Z","AT&T Stadium","Dallas","Quarter Final",null],
+[99,"TBD","TBD","2026-07-11T19:00:00Z","MetLife Stadium","New York/New Jersey","Quarter Final",null],
+[100,"TBD","TBD","2026-07-11T23:00:00Z","SoFi Stadium","Los Angeles","Quarter Final",null],
+
+[101,"TBD","TBD","2026-07-14T19:00:00Z","AT&T Stadium","Dallas","Semi Final",null],
+[102,"TBD","TBD","2026-07-15T19:00:00Z","MetLife Stadium","New York/New Jersey","Semi Final",null],
+
+[103,"TBD","TBD","2026-07-18T19:00:00Z","Hard Rock Stadium","Miami","Third Place",null],
+[104,"TBD","TBD","2026-07-19T19:00:00Z","MetLife Stadium","New York/New Jersey","Final",null]
+];
+
+const MATCHES = rawMatches.map(m=>({
+  id:m[0],home:m[1],away:m[2],kickoffUtc:m[3],stadium:m[4],city:m[5],stage:m[6],group:m[7]
+}));
+
+const STAGES = ["Group Stage","Round of 32","Round of 16","Quarter Final","Semi Final","Third Place","Final"];
+
+const TIMEZONES = [
+[-720,"UTC-12:00","Baker Island"],
+[-660,"UTC-11:00","American Samoa, Niue"],
+[-600,"UTC-10:00","Hawaii (USA), Tahiti"],
+[-570,"UTC-09:30","Marquesas Islands"],
+[-540,"UTC-09:00","Alaska (USA)"],
+[-480,"UTC-08:00","Los Angeles (USA), Vancouver (Canada)"],
+[-420,"UTC-07:00","Denver (USA), Calgary (Canada)"],
+[-360,"UTC-06:00","Mexico City, Chicago (USA), Guatemala"],
+[-300,"UTC-05:00","New York (USA), Toronto (Canada), Lima (Peru)"],
+[-240,"UTC-04:00","Caracas (Venezuela), Santiago (Chile), Halifax (Canada)"],
+[-210,"UTC-03:30","Newfoundland (Canada)"],
+[-180,"UTC-03:00","Buenos Aires (Argentina), Sao Paulo (Brazil)"],
+[-120,"UTC-02:00","South Georgia"],
+[-60,"UTC-01:00","Azores (Portugal), Cape Verde"],
+[0,"UTC+00:00","United Kingdom, Portugal, Iceland"],
+[60,"UTC+01:00","Germany, France, Spain, Nigeria"],
+[120,"UTC+02:00","South Africa, Egypt, Greece, Israel"],
+[180,"UTC+03:00","Russia (Moscow), Kenya, Saudi Arabia, Iraq"],
+[210,"UTC+03:30","Iran"],
+[240,"UTC+04:00","UAE, Oman, Azerbaijan"],
+[270,"UTC+04:30","Afghanistan"],
+[300,"UTC+05:00","Pakistan, Uzbekistan, Maldives"],
+[330,"UTC+05:30","India, Sri Lanka"],
+[345,"UTC+05:45","Nepal"],
+[360,"UTC+06:00","Bangladesh, Bhutan, Kazakhstan"],
+[390,"UTC+06:30","Myanmar, Cocos Islands"],
+[420,"UTC+07:00","Thailand, Vietnam, Indonesia (West)"],
+[480,"UTC+08:00","China, Singapore, Malaysia, Philippines"],
+[525,"UTC+08:45","Australia (Eucla)"],
+[540,"UTC+09:00","Japan, South Korea"],
+[570,"UTC+09:30","Australia (Adelaide, Darwin)"],
+[600,"UTC+10:00","Sydney (Australia), Papua New Guinea"],
+[630,"UTC+10:30","Lord Howe Island"],
+[660,"UTC+11:00","Solomon Islands, New Caledonia"],
+[720,"UTC+12:00","New Zealand, Fiji"],
+[765,"UTC+12:45","Chatham Islands"],
+[780,"UTC+13:00","Tonga, Samoa"],
+[840,"UTC+14:00","Line Islands (Kiribati)"]
+];
+
+const DAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const EARLY_SCHEDULE = {1:{wake:"06:30",sleep:"23:30"},2:{wake:"06:30",sleep:"23:30"},3:{wake:"06:30",sleep:"23:30"},4:{wake:"06:30",sleep:"23:30"},5:{wake:"06:30",sleep:"23:30"},6:{wake:"06:30",sleep:"23:30"},7:{wake:"06:30",sleep:"23:30"}};
+const LATE_SCHEDULE = {1:{wake:"08:30",sleep:"02:00"},2:{wake:"08:30",sleep:"02:00"},3:{wake:"08:30",sleep:"02:00"},4:{wake:"08:30",sleep:"02:00"},5:{wake:"08:30",sleep:"02:00"},6:{wake:"08:30",sleep:"02:00"},7:{wake:"08:30",sleep:"02:00"}};
+
+/* ================= STATE ================= */
+const DT = luxon.DateTime;
+const state = {
+  tzOffset: 330,
+  mode: "manual", // manual | early | late | custom
+  manualSet: new Set(),
+  customSchedule: JSON.parse(JSON.stringify(EARLY_SCHEDULE)),
+  search: "",
+  stageFilter: "all",
+  cityFilter: "all",
+  dateFrom: "",
+  dateTo: ""
+};
+
+/* ================= HELPERS ================= */
+function localDT(match){
+  return DT.fromISO(match.kickoffUtc,{zone:"utc"}).plus({minutes:state.tzOffset});
+}
+function timeParts(str){
+  const [h,m] = str.split(":").map(Number);
+  return {h,m};
+}
+function scheduleFor(mode){
+  if(mode==="early") return EARLY_SCHEDULE;
+  if(mode==="late") return LATE_SCHEDULE;
+  if(mode==="custom") return state.customSchedule;
+  return null;
+}
+function isAwake(local, schedule){
+  const day = local.weekday;
+  const prevDay = day===1?7:day-1;
+  const dayStart = local.startOf("day");
+
+  let cur = schedule[day];
+  let w = timeParts(cur.wake), s = timeParts(cur.sleep);
+  let wakeDT = dayStart.plus({hours:w.h,minutes:w.m});
+  let sleepDT = dayStart.plus({hours:s.h,minutes:s.m});
+  if(sleepDT <= wakeDT) sleepDT = sleepDT.plus({days:1});
+  if(local >= wakeDT && local <= sleepDT) return true;
+
+  let prev = schedule[prevDay];
+  let pw = timeParts(prev.wake), ps = timeParts(prev.sleep);
+  const prevDayStart = dayStart.minus({days:1});
+  let pWakeDT = prevDayStart.plus({hours:pw.h,minutes:pw.m});
+  let pSleepDT = prevDayStart.plus({hours:ps.h,minutes:ps.m});
+  if(pSleepDT <= pWakeDT) pSleepDT = pSleepDT.plus({days:1});
+  if(local >= pWakeDT && local <= pSleepDT) return true;
+
+  return false;
+}
+function isWatchable(match){
+  if(state.mode==="manual") return state.manualSet.has(match.id);
+  return isAwake(localDT(match), scheduleFor(state.mode));
+}
+function coverageFor(mode){
+  if(mode==="manual"){
+    const w = state.manualSet.size;
+    return {total:MATCHES.length, watch:w, miss:MATCHES.length-w, pct:(w/MATCHES.length*100)};
+  }
+  const sched = scheduleFor(mode);
+  let w=0;
+  MATCHES.forEach(m=>{ if(isAwake(localDT(m),sched)) w++; });
+  return {total:MATCHES.length, watch:w, miss:MATCHES.length-w, pct:(w/MATCHES.length*100)};
+}
+
+/* ================= RENDER HELPERS ================= */
+function flapChar(ch, key){
+  const cls = (ch==='.'||ch==='%') ? "flap thin" : "flap";
+  return `<div class="${cls}">${ch}</div>`;
+}
+function renderFlapBoard(value){
+  return value.toString().split("").map(flapChar).join("");
+}
+function tzLabel(offset){
+  const tz = TIMEZONES.find(t=>t[0]===offset);
+  return tz ? tz[1] : "UTC+00:00";
+}
+
+/* ================= RENDER SECTIONS ================= */
+function renderHeader(){
+  const options = TIMEZONES.map(t=>
+    `<option value="${t[0]}" ${t[0]===state.tzOffset?"selected":""}>${t[1]} — ${t[2]}</option>`
+  ).join("");
+  return `
+  <header class="topbar">
+    <div class="brand">
+      <span class="ball">⚽</span>
+      <div class="brand-text">
+        <strong>World Cup Watch Planner</strong>
+        <span>FIFA World Cup 2026 · 104 Matches</span>
+      </div>
+    </div>
+    <div class="tz-wrap">
+      <label for="tz-select">Your timezone</label>
+      <select id="tz-select">${options}</select>
+    </div>
+  </header>`;
+}
+
+function renderHero(){
+  const cov = coverageFor(state.mode);
+  const pctStr = cov.pct.toFixed(1)+"%";
+  let modeLabel = "Manual selections";
+  if(state.mode==="early") modeLabel = "Early Waker mode";
+  if(state.mode==="late") modeLabel = "Late Sleeper mode";
+  if(state.mode==="custom") modeLabel = "Custom schedule";
+  return `
+  <section class="hero">
+    <div class="hero-text">
+      <h1>Plan your World Cup, your way</h1>
+      <p>Pick your timezone, choose how the optimizer should work, and instantly see how much of the
+      2026 FIFA World Cup you'll actually be able to watch — group stage through the Final, all 104 matches.</p>
+    </div>
+    <div class="flap-block">
+      <div class="flap-board">${renderFlapBoard(pctStr)}</div>
+      <div class="flap-label">${modeLabel} · ${cov.watch} of ${cov.total} matches</div>
+    </div>
+  </section>`;
+}
+
+function renderOnboarding(){
+  const early = state.mode==="early", late = state.mode==="late";
+  const sleepActive = early || late;
+  const customRows = DAY_NAMES.map((name,i)=>{
+    const dayNum = i+1;
+    const sch = state.customSchedule[dayNum];
+    return `<tr>
+      <td>${name}</td>
+      <td><input type="time" data-day="${dayNum}" data-field="wake" value="${sch.wake}"></td>
+      <td><input type="time" data-day="${dayNum}" data-field="sleep" value="${sch.sleep}"></td>
+    </tr>`;
+  }).join("");
+
+  return `
+  <h2 class="section-title"><span class="num">1</span> Choose how the planner should work</h2>
+  <div class="mode-grid">
+    <div class="mode-card ${state.mode==='manual'?'active':''}" data-mode="manual">
+      <h3><span class="check"></span> Manual Selection</h3>
+      <p>Tick the matches you already know you'll catch. We'll just count them up.</p>
+    </div>
+    <div class="mode-card ${sleepActive?'active':''}" data-mode="early">
+      <h3><span class="check"></span> Sleep Mode</h3>
+      <p>Pick Early Waker or Late Sleeper and we'll auto-mark every match based on your local kickoff time.</p>
+    </div>
+    <div class="mode-card ${state.mode==='custom'?'active':''}" data-mode="custom">
+      <h3><span class="check"></span> Custom Schedule</h3>
+      <p>Set your own sleep and wake times for each day of the week for a personalised viewing plan.</p>
+    </div>
+  </div>
+
+  ${sleepActive ? `
+  <div class="subpanel">
+    <div class="sleep-toggle">
+      <button class="pill-btn ${early?'active':''}" data-sleepmode="early">Early Waker</button>
+      <button class="pill-btn ${late?'active':''}" data-sleepmode="late">Late Sleeper</button>
+    </div>
+    <div class="sleep-times">
+      <span>Wake: <b>${early?"06:30 AM":"08:30 AM"}</b></span>
+      <span>Sleep: <b>${early?"11:30 PM":"02:00 AM"}</b></span>
+      <span>Awake window applied every day, in your selected timezone.</span>
+    </div>
+  </div>` : ""}
+
+  ${state.mode==="custom" ? `
+  <div class="subpanel">
+    <table class="custom-table">
+      <thead><tr><th>Day</th><th>Wake time</th><th>Sleep time</th></tr></thead>
+      <tbody>${customRows}</tbody>
+    </table>
+    <div class="sleep-times" style="margin-top:10px;">
+      <span>Tip: if your sleep time is earlier than your wake time (e.g. sleep 01:00, wake 08:30), it's treated as after midnight.</span>
+    </div>
+  </div>` : ""}
+  `;
+}
+
+function generateInsights(){
+  const insights = [];
+  if(state.mode==="manual"){
+    const cov = coverageFor("manual");
+    const koWatch = MATCHES.filter(m=>m.stage!=="Group Stage" && state.manualSet.has(m.id)).length;
+    const koTotal = MATCHES.filter(m=>m.stage!=="Group Stage").length;
+    insights.push(`You've selected ${cov.watch} of ${cov.total} matches — that's ${cov.pct.toFixed(1)}% of the tournament.`);
+    insights.push(`Of the ${koTotal} knockout-stage matches (Round of 32 onward), you've marked ${koWatch} as watchable.`);
+    return insights;
+  }
+
+  const cov = coverageFor(state.mode);
+  insights.push(`Your ${state.mode==='early'?'Early Waker':state.mode==='late'?'Late Sleeper':'custom'} schedule lets you watch ${cov.watch} of ${cov.total} matches — ${cov.pct.toFixed(1)}% coverage.`);
+
+  const koMatches = MATCHES.filter(m=>m.stage!=="Group Stage");
+  const koWatchable = koMatches.filter(m=>isWatchable(m));
+  if(koWatchable.length===koMatches.length){
+    insights.push(`You can watch every single knockout match — Round of 32 through the Final.`);
+  }else{
+    insights.push(`You'll miss ${koMatches.length-koWatchable.length} of the ${koMatches.length} knockout matches.`);
+  }
+
+  ["Quarter Final","Semi Final","Final","Third Place"].forEach(stage=>{
+    const all = MATCHES.filter(m=>m.stage===stage);
+    if(!all.length) return;
+    const missed = all.filter(m=>!isWatchable(m)).length;
+    if(missed===0){
+      insights.push(`You're set to catch every ${stage} match.`);
+    }else{
+      insights.push(`You miss ${missed} of ${all.length} ${stage}${all.length>1?" matches":" match"}.`);
+    }
+  });
+
+  if(state.mode==="early" || state.mode==="late"){
+    const other = state.mode==="early" ? coverageFor("late") : coverageFor("early");
+    const diff = other.watch - cov.watch;
+    if(diff>0){
+      insights.push(`${state.mode==='early'?'Late Sleeper':'Early Waker'} mode would give you ${diff} more match${diff>1?"es":""} than ${state.mode==='early'?'Early Waker':'Late Sleeper'} mode.`);
+    }else if(diff<0){
+      insights.push(`${state.mode==='early'?'Early Waker':'Late Sleeper'} mode already beats ${state.mode==='early'?'Late Sleeper':'Early Waker'} mode by ${-diff} match${-diff>1?"es":""}.`);
+    }else{
+      insights.push(`Early Waker and Late Sleeper mode give you the exact same coverage at this timezone.`);
+    }
+  }
+
+  if(state.mode==="custom"){
+    const earlyCov = coverageFor("early"), lateCov = coverageFor("late");
+    insights.push(`For comparison: Early Waker mode gives ${earlyCov.watch} matches, Late Sleeper gives ${lateCov.watch} matches at this timezone.`);
+  }
+
+  return insights;
+}
+
+function renderSummary(){
+  const cov = coverageFor(state.mode);
+  const insights = generateInsights();
+
+  let watchList, missList;
+  if(state.mode==="manual"){
+    watchList = MATCHES.filter(m=>state.manualSet.has(m.id));
+    missList = MATCHES.filter(m=>!state.manualSet.has(m.id));
+  }else{
+    watchList = MATCHES.filter(m=>isWatchable(m));
+    missList = MATCHES.filter(m=>!isWatchable(m));
+  }
+
+  const fmt = m => {
+    const d = localDT(m);
+    return `<li><span>${m.home} vs ${m.away}</span> — ${d.toFormat("EEE d LLL, HH:mm")} (${m.stage})</li>`;
+  };
+
+  return `
+  <h2 class="section-title"><span class="num">2</span> Your viewing summary</h2>
+  <div class="summary-grid">
+    <div class="stat-card"><div class="val">${cov.total}</div><div class="lbl">Total matches</div></div>
+    <div class="stat-card"><div class="val watch">${cov.watch}</div><div class="lbl">Watchable</div></div>
+    <div class="stat-card"><div class="val miss">${cov.miss}</div><div class="lbl">Missed</div></div>
+    <div class="stat-card"><div class="val">${cov.pct.toFixed(1)}%</div><div class="lbl">Coverage</div></div>
+  </div>
+  <div class="insights">
+    ${insights.map(i=>`<div class="insight">${i}</div>`).join("")}
+  </div>
+  <div class="collapse-row">
+    <details class="match-collapse">
+      <summary>✅ Watchable matches <span class="tag">(${watchList.length})</span></summary>
+      <ul class="collapse-list">${watchList.map(fmt).join("") || "<li>None yet</li>"}</ul>
+    </details>
+    <details class="match-collapse">
+      <summary>🚫 Missed matches <span class="tag">(${missList.length})</span></summary>
+      <ul class="collapse-list">${missList.map(fmt).join("") || "<li>None — full coverage!</li>"}</ul>
+    </details>
+  </div>
+  `;
+}
+
+function renderControls(){
+  const cities = [...new Set(MATCHES.map(m=>m.city))].sort();
+  const stageOpts = STAGES.map(s=>`<option value="${s}" ${state.stageFilter===s?"selected":""}>${s}</option>`).join("");
+  const cityOpts = cities.map(c=>`<option value="${c}" ${state.cityFilter===c?"selected":""}>${c}</option>`).join("");
+  return `
+  <h2 class="section-title"><span class="num">3</span> Browse the schedule</h2>
+  <div class="controls">
+    <div class="field" style="flex:1;min-width:160px;">
+      <span class="field-label">Search team</span>
+      <input type="text" id="search-input" placeholder="e.g. Brazil" value="${state.search}">
+    </div>
+    <div class="field">
+      <span class="field-label">Stage</span>
+      <select id="stage-filter">
+        <option value="all" ${state.stageFilter==="all"?"selected":""}>All stages</option>
+        ${stageOpts}
+      </select>
+    </div>
+    <div class="field">
+      <span class="field-label">Host city</span>
+      <select id="city-filter">
+        <option value="all" ${state.cityFilter==="all"?"selected":""}>All cities</option>
+        ${cityOpts}
+      </select>
+    </div>
+    <div class="field">
+      <span class="field-label">From date</span>
+      <input type="date" id="date-from" value="${state.dateFrom}">
+    </div>
+    <div class="field">
+      <span class="field-label">To date</span>
+      <input type="date" id="date-to" value="${state.dateTo}">
+    </div>
+    <button class="clear-btn" id="clear-filters">Clear filters</button>
+  </div>
+  `;
+}
+
+function renderMatchList(){
+  let list = MATCHES.filter(m=>{
+    if(state.search){
+      const q = state.search.toLowerCase();
+      if(!m.home.toLowerCase().includes(q) && !m.away.toLowerCase().includes(q)) return false;
+    }
+    if(state.stageFilter!=="all" && m.stage!==state.stageFilter) return false;
+    if(state.cityFilter!=="all" && m.city!==state.cityFilter) return false;
+    const d = localDT(m).toISODate();
+    if(state.dateFrom && d < state.dateFrom) return false;
+    if(state.dateTo && d > state.dateTo) return false;
+    return true;
+  });
+
+  if(list.length===0){
+    return `<div class="empty-msg">No matches found for these filters. Try clearing them.</div>`;
+  }
+
+  let html = "";
+  let lastDate = null;
+  list.forEach(m=>{
+    const d = localDT(m);
+    const dateKey = d.toFormat("cccc, d LLLL yyyy");
+    if(dateKey!==lastDate){
+      html += `<div class="date-heading">${dateKey}</div>`;
+      lastDate = dateKey;
+    }
+    const watchable = isWatchable(m);
+    const isKO = m.stage!=="Group Stage";
+    const utc = DT.fromISO(m.kickoffUtc,{zone:"utc"});
+
+    let rightControl;
+    if(state.mode==="manual"){
+      rightControl = `<label class="checkbox-wrap">
+        <input type="checkbox" data-match-id="${m.id}" ${watchable?"checked":""}>
+        I can watch this
+      </label>`;
+    }else{
+      rightControl = `<div class="watch-flag">
+        <span class="dot ${watchable?'watch':'miss'}"></span>
+        ${watchable?"Watchable":"Not watchable"}
+      </div>`;
+    }
+
+    html += `
+    <div class="match-card ${isKO?'knockout':''}">
+      <div class="time-block">
+        <div class="time">${d.toFormat("HH:mm")}</div>
+        <div class="utc">UTC ${utc.toFormat("HH:mm")}</div>
+      </div>
+      <div class="teams">
+        <div class="vs">${m.home} vs ${m.away}</div>
+        <div class="venue">${m.stadium}, ${m.city}</div>
+      </div>
+      <span class="stage-badge ${isKO?'knockout':''}">${m.stage}${m.group?` · Group ${m.group}`:""}</span>
+      ${rightControl}
+    </div>`;
+  });
+  return html;
+}
+
+function renderFooter(){
+  return `<footer>
+    Kickoff times shown for the FIFA World Cup 2026 group stage are compiled from publicly reported schedules
+    (June 11 – June 28, 2026). Knockout-stage fixtures (Round of 32 onward) show provisional dates, venues and
+    times pending final group standings — confirm details on FIFA.com closer to each round.
+  </footer>`;
+}
+
+/* ================= MAIN RENDER ================= */
+function render(){
+  const root = document.getElementById("app");
+
+  const active = document.activeElement;
+  const focusId = active ? active.id : null;
+  const focusSel = (active && active.selectionStart!=null) ? active.selectionStart : null;
+  const focusDay = active ? active.getAttribute && active.getAttribute("data-day") : null;
+  const focusField = active ? active.getAttribute && active.getAttribute("data-field") : null;
+
+  root.innerHTML = `
+    ${renderHeader()}
+    <div class="container">
+      ${renderHero()}
+      ${renderOnboarding()}
+      ${renderSummary()}
+      ${renderControls()}
+      ${renderMatchList()}
+    </div>
+    ${renderFooter()}
+  `;
+
+  attachListeners();
+
+  // restore focus for text inputs / time inputs so typing isn't interrupted
+  if(focusId){
+    const el = document.getElementById(focusId);
+    if(el){ el.focus(); if(focusSel!=null && el.setSelectionRange) el.setSelectionRange(focusSel,focusSel); }
+  }else if(focusDay && focusField){
+    const el = document.querySelector(`input[data-day="${focusDay}"][data-field="${focusField}"]`);
+    if(el) el.focus();
+  }
+}
+
+function attachListeners(){
+  const tzSel = document.getElementById("tz-select");
+  if(tzSel) tzSel.addEventListener("change", e=>{ state.tzOffset = parseInt(e.target.value,10); render(); });
+
+  document.querySelectorAll(".mode-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      const m = card.getAttribute("data-mode");
+      if(m==="early"){ state.mode = (state.mode==="early"||state.mode==="late") ? state.mode : "early"; }
+      else { state.mode = m; }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-sleepmode]").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      e.stopPropagation();
+      state.mode = btn.getAttribute("data-sleepmode");
+      render();
+    });
+  });
+
+  document.querySelectorAll('input[data-day]').forEach(inp=>{
+    inp.addEventListener("change", e=>{
+      const day = parseInt(e.target.getAttribute("data-day"),10);
+      const field = e.target.getAttribute("data-field");
+      state.customSchedule[day][field] = e.target.value;
+      render();
+    });
+  });
+
+  const searchInput = document.getElementById("search-input");
+  if(searchInput) searchInput.addEventListener("input", e=>{ state.search = e.target.value; render(); });
+
+  const stageFilter = document.getElementById("stage-filter");
+  if(stageFilter) stageFilter.addEventListener("change", e=>{ state.stageFilter = e.target.value; render(); });
+
+  const cityFilter = document.getElementById("city-filter");
+  if(cityFilter) cityFilter.addEventListener("change", e=>{ state.cityFilter = e.target.value; render(); });
+
+  const dateFrom = document.getElementById("date-from");
+  if(dateFrom) dateFrom.addEventListener("change", e=>{ state.dateFrom = e.target.value; render(); });
+
+  const dateTo = document.getElementById("date-to");
+  if(dateTo) dateTo.addEventListener("change", e=>{ state.dateTo = e.target.value; render(); });
+
+  const clearBtn = document.getElementById("clear-filters");
+  if(clearBtn) clearBtn.addEventListener("click", ()=>{
+    state.search=""; state.stageFilter="all"; state.cityFilter="all"; state.dateFrom=""; state.dateTo="";
+    render();
+  });
+
+  document.querySelectorAll('input[data-match-id]').forEach(cb=>{
+    cb.addEventListener("change", e=>{
+      const id = parseInt(e.target.getAttribute("data-match-id"),10);
+      if(e.target.checked) state.manualSet.add(id);
+      else state.manualSet.delete(id);
+      render();
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>
