@@ -400,16 +400,23 @@ const LATE_SCHEDULE = {1:{wake:"08:30",sleep:"02:00"},2:{wake:"08:30",sleep:"02:
 
 /* ================= STATE ================= */
 const DT = luxon.DateTime;
+const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
+
 const state = {
   tzOffset: 330,
   mode: "manual", // manual | early | late | custom
   manualSet: new Set(),
+  editableEarly: {wake:"06:30",sleep:"23:30"},
+  editableLate: {wake:"08:30",sleep:"02:00"},
   customSchedule: JSON.parse(JSON.stringify(EARLY_SCHEDULE)),
   search: "",
   stageFilter: "all",
   cityFilter: "all",
+  groupFilter: "all",
   dateFrom: "",
-  dateTo: ""
+  dateTo: "",
+  viewMode: "date", // date | group
+  minWatchThreshold: 30 // minutes: 30 | 60 | 90
 };
 
 /* ================= HELPERS ================= */
@@ -420,37 +427,49 @@ function timeParts(str){
   const [h,m] = str.split(":").map(Number);
   return {h,m};
 }
+function dayMapFromPreset(times){
+  const obj = {};
+  for(let i=1;i<=7;i++) obj[i] = {wake:times.wake, sleep:times.sleep};
+  return obj;
+}
 function scheduleFor(mode){
-  if(mode==="early") return EARLY_SCHEDULE;
-  if(mode==="late") return LATE_SCHEDULE;
+  if(mode==="early") return dayMapFromPreset(state.editableEarly);
+  if(mode==="late") return dayMapFromPreset(state.editableLate);
   if(mode==="custom") return state.customSchedule;
   return null;
 }
-function isAwake(local, schedule){
-  const day = local.weekday;
-  const prevDay = day===1?7:day-1;
-  const dayStart = local.startOf("day");
+const MATCH_DURATION_MIN = 105;
 
-  let cur = schedule[day];
-  let w = timeParts(cur.wake), s = timeParts(cur.sleep);
+// Returns the [wake, sleepEnd] DateTime interval for the given local day-start and weekday schedule.
+function awakeInterval(dayStart, sched){
+  const w = timeParts(sched.wake), s = timeParts(sched.sleep);
   let wakeDT = dayStart.plus({hours:w.h,minutes:w.m});
   let sleepDT = dayStart.plus({hours:s.h,minutes:s.m});
   if(sleepDT <= wakeDT) sleepDT = sleepDT.plus({days:1});
-  if(local >= wakeDT && local <= sleepDT) return true;
+  return [wakeDT, sleepDT];
+}
 
-  let prev = schedule[prevDay];
-  let pw = timeParts(prev.wake), ps = timeParts(prev.sleep);
-  const prevDayStart = dayStart.minus({days:1});
-  let pWakeDT = prevDayStart.plus({hours:pw.h,minutes:pw.m});
-  let pSleepDT = prevDayStart.plus({hours:ps.h,minutes:ps.m});
-  if(pSleepDT <= pWakeDT) pSleepDT = pSleepDT.plus({days:1});
-  if(local >= pWakeDT && local <= pSleepDT) return true;
-
-  return false;
+// Single source of truth: minutes of overlap between the match window
+// [kickoff -> kickoff + MATCH_DURATION_MIN] and the user's awake windows.
+function calculateWatchableMinutes(match, schedule){
+  const start = localDT(match);
+  const end = start.plus({minutes:MATCH_DURATION_MIN});
+  let total = 0;
+  for(let offset=-1; offset<=1; offset++){
+    const dayStart = start.startOf("day").plus({days:offset});
+    const sched = schedule[dayStart.weekday];
+    const [wakeDT, sleepDT] = awakeInterval(dayStart, sched);
+    const overlapStart = start > wakeDT ? start : wakeDT;
+    const overlapEnd = end < sleepDT ? end : sleepDT;
+    if(overlapEnd > overlapStart){
+      total += overlapEnd.diff(overlapStart,"minutes").minutes;
+    }
+  }
+  return total;
 }
 function isWatchable(match){
   if(state.mode==="manual") return state.manualSet.has(match.id);
-  return isAwake(localDT(match), scheduleFor(state.mode));
+  return calculateWatchableMinutes(match, scheduleFor(state.mode)) >= state.minWatchThreshold;
 }
 function coverageFor(mode){
   if(mode==="manual"){
@@ -459,7 +478,7 @@ function coverageFor(mode){
   }
   const sched = scheduleFor(mode);
   let w=0;
-  MATCHES.forEach(m=>{ if(isAwake(localDT(m),sched)) w++; });
+  MATCHES.forEach(m=>{ if(calculateWatchableMinutes(m,sched) >= state.minWatchThreshold) w++; });
   return {total:MATCHES.length, watch:w, miss:MATCHES.length-w, pct:(w/MATCHES.length*100)};
 }
 
@@ -493,6 +512,14 @@ function renderHeader(){
     <div class="tz-wrap">
       <label for="tz-select">Your timezone</label>
       <select id="tz-select">${options}</select>
+    </div>
+    <div class="tz-wrap">
+      <label for="watch-threshold-select">Minimum Watch Time</label>
+      <select id="watch-threshold-select">
+        <option value="30" ${state.minWatchThreshold===30?"selected":""}>30 minutes</option>
+        <option value="60" ${state.minWatchThreshold===60?"selected":""}>60 minutes</option>
+        <option value="90" ${state.minWatchThreshold===90?"selected":""}>90 minutes</option>
+      </select>
     </div>
   </header>`;
 }
@@ -551,13 +578,20 @@ function renderOnboarding(){
   ${sleepActive ? `
   <div class="subpanel">
     <div class="sleep-toggle">
-      <button class="pill-btn ${early?'active':''}" data-sleepmode="early">Early Waker</button>
-      <button class="pill-btn ${late?'active':''}" data-sleepmode="late">Late Sleeper</button>
+      <button class="pill-btn ${early?'active':''}" data-sleepmode="early">Early Waker ${early?'(editable preset)':''}</button>
+      <button class="pill-btn ${late?'active':''}" data-sleepmode="late">Late Sleeper ${late?'(editable preset)':''}</button>
     </div>
-    <div class="sleep-times">
-      <span>Wake: <b>${early?"06:30 AM":"08:30 AM"}</b></span>
-      <span>Sleep: <b>${early?"11:30 PM":"02:00 AM"}</b></span>
-      <span>Awake window applied every day, in your selected timezone.</span>
+    <table class="custom-table">
+      <thead><tr><th>Wake Time</th><th>Sleep Time</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><input type="time" id="preset-wake" value="${early?state.editableEarly.wake:state.editableLate.wake}"></td>
+          <td><input type="time" id="preset-sleep" value="${early?state.editableEarly.sleep:state.editableLate.sleep}"></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="sleep-times" style="margin-top:10px;">
+      <span>This awake window applies every day, in your selected timezone. Changing it only affects ${early?'Early Waker':'Late Sleeper'} mode.</span>
     </div>
   </div>` : ""}
 
@@ -574,54 +608,148 @@ function renderOnboarding(){
   `;
 }
 
-function generateInsights(){
-  const insights = [];
-  if(state.mode==="manual"){
-    const cov = coverageFor("manual");
-    const koWatch = MATCHES.filter(m=>m.stage!=="Group Stage" && state.manualSet.has(m.id)).length;
-    const koTotal = MATCHES.filter(m=>m.stage!=="Group Stage").length;
-    insights.push(`You've selected ${cov.watch} of ${cov.total} matches — that's ${cov.pct.toFixed(1)}% of the tournament.`);
-    insights.push(`Of the ${koTotal} knockout-stage matches (Round of 32 onward), you've marked ${koWatch} as watchable.`);
-    return insights;
-  }
-
-  const cov = coverageFor(state.mode);
-  insights.push(`Your ${state.mode==='early'?'Early Waker':state.mode==='late'?'Late Sleeper':'custom'} schedule lets you watch ${cov.watch} of ${cov.total} matches — ${cov.pct.toFixed(1)}% coverage.`);
-
-  const koMatches = MATCHES.filter(m=>m.stage!=="Group Stage");
-  const koWatchable = koMatches.filter(m=>isWatchable(m));
-  if(koWatchable.length===koMatches.length){
-    insights.push(`You can watch every single knockout match — Round of 32 through the Final.`);
-  }else{
-    insights.push(`You'll miss ${koMatches.length-koWatchable.length} of the ${koMatches.length} knockout matches.`);
-  }
-
-  ["Quarter Final","Semi Final","Final","Third Place"].forEach(stage=>{
-    const all = MATCHES.filter(m=>m.stage===stage);
-    if(!all.length) return;
-    const missed = all.filter(m=>!isWatchable(m)).length;
-    if(missed===0){
-      insights.push(`You're set to catch every ${stage} match.`);
-    }else{
-      insights.push(`You miss ${missed} of ${all.length} ${stage}${all.length>1?" matches":" match"}.`);
-    }
+/* ---- Insight helper functions ---- */
+function coverageAssessmentInsight(pct){
+  if(pct>=87.5) return `Your current schedule covers ${pct.toFixed(0)}% of the tournament — you'll be tuned in for almost every match played.`;
+  if(pct>=62.5) return `Your current schedule covers ${pct.toFixed(0)}% of the tournament — roughly 3 out of every 4 matches fit your day.`;
+  if(pct>=37.5) return `Your current schedule covers ${pct.toFixed(0)}% of the tournament — about half the matches line up with your waking hours.`;
+  if(pct>=12.5) return `Your current schedule covers ${pct.toFixed(0)}% of the tournament — roughly 1 out of every 4 matches fits your day, so you'll be selective.`;
+  return `Your current schedule covers ${pct.toFixed(0)}% of the tournament — most kickoffs land while you're asleep.`;
+}
+function fanPersonaInsight(pct){
+  if(pct>80) return `World Cup Die-Hard: you'll be available for almost the entire tournament, group stage through the Final.`;
+  if(pct>=60) return `Tournament Regular: you'll catch the majority of the key matches without major schedule changes.`;
+  if(pct>=40) return `Weekend Specialist: you'll follow the tournament comfortably without sacrificing much sleep.`;
+  return `Highlights Viewer: your schedule favors a select few standout matches rather than full tournament coverage.`;
+}
+function knockoutCoverageInsight(koWatch, koTotal, groupWatch, groupTotal){
+  if(koWatch===koTotal) return `You'll be available for the entire knockout stage — all ${koTotal} matches from the Round of 32 through the Final.`;
+  const koPct = koWatch/koTotal*100;
+  const groupPct = groupTotal ? groupWatch/groupTotal*100 : 100;
+  if(koPct>=87.5) return `Your schedule allows you to watch ${koWatch} of the ${koTotal} knockout matches — you'll be there for nearly every big moment.`;
+  if(koPct - groupPct >= 10) return `Your schedule allows you to watch ${koWatch} of the ${koTotal} knockout matches — knockout kickoffs suit you noticeably better than the group stage.`;
+  if(groupPct - koPct >= 10) return `Most of your missed matches occur during the group stage rather than the knockout rounds — you'll catch ${koWatch} of the ${koTotal} knockout matches.`;
+  return `Your schedule allows you to watch ${koWatch} of the ${koTotal} knockout matches — about the same hit rate as the group stage overall.`;
+}
+function missPatternInsight(missList){
+  if(missList.length < 3) return null;
+  const buckets = {late:0, morning:0, afternoon:0, evening:0};
+  missList.forEach(m=>{
+    const h = localDT(m).hour;
+    if(h>=0 && h<6) buckets.late++;
+    else if(h>=6 && h<12) buckets.morning++;
+    else if(h>=12 && h<18) buckets.afternoon++;
+    else buckets.evening++;
   });
-
-  if(state.mode==="early" || state.mode==="late"){
-    const other = state.mode==="early" ? coverageFor("late") : coverageFor("early");
-    const diff = other.watch - cov.watch;
-    if(diff>0){
-      insights.push(`${state.mode==='early'?'Late Sleeper':'Early Waker'} mode would give you ${diff} more match${diff>1?"es":""} than ${state.mode==='early'?'Early Waker':'Late Sleeper'} mode.`);
-    }else if(diff<0){
-      insights.push(`${state.mode==='early'?'Early Waker':'Late Sleeper'} mode already beats ${state.mode==='early'?'Late Sleeper':'Early Waker'} mode by ${-diff} match${-diff>1?"es":""}.`);
-    }else{
-      insights.push(`Early Waker and Late Sleeper mode give you the exact same coverage at this timezone.`);
-    }
+  const labels = {
+    late:"Late-night kickoffs (12 AM\u20136 AM)",
+    morning:"Early-morning kickoffs (6 AM\u201312 PM)",
+    afternoon:"Afternoon kickoffs (12 PM\u20136 PM)",
+    evening:"Evening kickoffs (6 PM\u201312 AM)"
+  };
+  const [topBucket, topCount] = Object.entries(buckets).sort((a,b)=>b[1]-a[1])[0];
+  const pct = Math.round(topCount/missList.length*100);
+  if(pct < 40) return null;
+  return `${labels[topBucket]} are responsible for ${pct}% of your missed matches.`;
+}
+function shiftSchedule(schedule, field, deltaMinutes){
+  const newSched = {};
+  for(let d=1; d<=7; d++){
+    const orig = schedule[d];
+    const t = timeParts(orig[field]);
+    let totalMin = ((t.h*60 + t.m + deltaMinutes) % 1440 + 1440) % 1440;
+    const nh = Math.floor(totalMin/60), nm = totalMin%60;
+    newSched[d] = Object.assign({}, orig, {[field]: `${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}`});
   }
-
+  return newSched;
+}
+function countWatchable(schedule){
+  let w = 0;
+  MATCHES.forEach(m=>{ if(calculateWatchableMinutes(m,schedule) >= state.minWatchThreshold) w++; });
+  return w;
+}
+function optimizationInsight(baseWatch){
+  const sched = scheduleFor(state.mode);
+  const laterSleepGain = countWatchable(shiftSchedule(sched,"sleep",30)) - baseWatch;
+  const earlierWakeGain = countWatchable(shiftSchedule(sched,"wake",-30)) - baseWatch;
+  if(laterSleepGain<=0 && earlierWakeGain<=0) return null;
+  if(laterSleepGain >= earlierWakeGain && laterSleepGain>0){
+    return `Going to bed 30 minutes later would make ${laterSleepGain} additional match${laterSleepGain>1?"es":""} watchable.`;
+  }
+  return `Waking up 30 minutes earlier could unlock ${earlierWakeGain} extra match${earlierWakeGain>1?"es":""}.`;
+}
+function modeComparisonInsight(cov){
+  if(state.mode==="early" || state.mode==="late"){
+    const otherMode = state.mode==="early" ? "late" : "early";
+    const other = coverageFor(otherMode);
+    const diff = other.watch - cov.watch;
+    const otherLabel = state.mode==="early" ? "Late Sleeper" : "Early Waker";
+    const thisLabel = state.mode==="early" ? "Early Waker" : "Late Sleeper";
+    if(Math.abs(diff)<=1) return `Both preset modes perform almost identically for this timezone.`;
+    if(diff>0) return `${otherLabel} mode performs ${diff} match${diff>1?"es":""} better than ${thisLabel} mode in your selected timezone.`;
+    return `${thisLabel} mode performs ${-diff} match${-diff>1?"es":""} better than ${otherLabel} mode in your selected timezone.`;
+  }
   if(state.mode==="custom"){
     const earlyCov = coverageFor("early"), lateCov = coverageFor("late");
-    insights.push(`For comparison: Early Waker mode gives ${earlyCov.watch} matches, Late Sleeper gives ${lateCov.watch} matches at this timezone.`);
+    const bestPreset = Math.max(earlyCov.watch, lateCov.watch);
+    if(cov.watch > bestPreset) return `Your custom schedule outperforms both presets, covering ${cov.watch - bestPreset} more match${(cov.watch-bestPreset)>1?"es":""} than the better-performing preset.`;
+    if(cov.watch === bestPreset) return `Your custom schedule matches the best-performing preset mode for this timezone.`;
+    return `Either preset mode currently outperforms your custom schedule by ${bestPreset - cov.watch} match${(bestPreset-cov.watch)>1?"es":""} — small tweaks could close the gap.`;
+  }
+  return null;
+}
+function timezoneInsight(){
+  const overnightCount = MATCHES.filter(m=>{
+    const h = localDT(m).hour;
+    return h>=0 && h<6;
+  }).length;
+  const pct = overnightCount/MATCHES.length*100;
+  if(pct>=40) return `Your timezone shifts a large share of matches (${pct.toFixed(0)}%) into the 12 AM\u20136 AM window, which explains many of the missed fixtures.`;
+  if(pct<=10) return `Your timezone keeps almost all kickoffs out of the overnight hours, which works strongly in your favor.`;
+  return null;
+}
+
+function generateInsights(){
+  const insights = [];
+  const cov = coverageFor(state.mode);
+  const pct = cov.pct;
+
+  // 1. Coverage assessment (always shown)
+  insights.push(coverageAssessmentInsight(pct));
+
+  // 2. Fan persona (always shown, single)
+  insights.push(fanPersonaInsight(pct));
+
+  // 3. Knockout coverage (always shown)
+  const koMatches = MATCHES.filter(m=>m.stage!=="Group Stage");
+  const groupMatches = MATCHES.filter(m=>m.stage==="Group Stage");
+  const koWatch = koMatches.filter(m=>isWatchable(m)).length;
+  const groupWatch = groupMatches.filter(m=>isWatchable(m)).length;
+  insights.push(knockoutCoverageInsight(koWatch, koMatches.length, groupWatch, groupMatches.length));
+
+  // Remaining candidate insights, in priority order
+  const candidates = [];
+  const missList = state.mode==="manual"
+    ? MATCHES.filter(m=>!state.manualSet.has(m.id))
+    : MATCHES.filter(m=>!isWatchable(m));
+
+  const missInsight = missPatternInsight(missList);
+  if(missInsight) candidates.push(missInsight);
+
+  if(state.mode!=="manual"){
+    const optInsight = optimizationInsight(cov.watch);
+    if(optInsight) candidates.push(optInsight);
+
+    const modeInsight = modeComparisonInsight(cov);
+    if(modeInsight) candidates.push(modeInsight);
+  }
+
+  const tzInsight = timezoneInsight();
+  if(tzInsight) candidates.push(tzInsight);
+
+  for(const c of candidates){
+    if(insights.length>=6) break;
+    insights.push(c);
   }
 
   return insights;
@@ -653,6 +781,11 @@ function renderSummary(){
     <div class="stat-card"><div class="val miss">${cov.miss}</div><div class="lbl">Missed</div></div>
     <div class="stat-card"><div class="val">${cov.pct.toFixed(1)}%</div><div class="lbl">Coverage</div></div>
   </div>
+  <div class="insight" style="border-left-color:var(--turf-light);">
+    A match is considered <b>watchable</b> only if your awake schedule overlaps with it for at least
+    <b>${state.minWatchThreshold} minutes</b> (your current "Minimum Watch Time" setting, top right).
+    Every match is assumed to last <b>105 minutes</b> (kickoff to final whistle, including stoppage).
+  </div>
   <div class="insights">
     ${insights.map(i=>`<div class="insight">${i}</div>`).join("")}
   </div>
@@ -673,12 +806,20 @@ function renderControls(){
   const cities = [...new Set(MATCHES.map(m=>m.city))].sort();
   const stageOpts = STAGES.map(s=>`<option value="${s}" ${state.stageFilter===s?"selected":""}>${s}</option>`).join("");
   const cityOpts = cities.map(c=>`<option value="${c}" ${state.cityFilter===c?"selected":""}>${c}</option>`).join("");
+  const groupOpts = GROUPS.map(g=>`<option value="${g}" ${state.groupFilter===g?"selected":""}>Group ${g}</option>`).join("");
   return `
   <h2 class="section-title"><span class="num">3</span> Browse the schedule</h2>
   <div class="controls">
     <div class="field" style="flex:1;min-width:160px;">
       <span class="field-label">Search team</span>
       <input type="text" id="search-input" placeholder="e.g. Brazil" value="${state.search}">
+    </div>
+    <div class="field">
+      <span class="field-label">Filter by Group</span>
+      <select id="group-filter">
+        <option value="all" ${state.groupFilter==="all"?"selected":""}>All Groups</option>
+        ${groupOpts}
+      </select>
     </div>
     <div class="field">
       <span class="field-label">Stage</span>
@@ -702,9 +843,50 @@ function renderControls(){
       <span class="field-label">To date</span>
       <input type="date" id="date-to" value="${state.dateTo}">
     </div>
+    <div class="field">
+      <span class="field-label">View Schedule By</span>
+      <select id="view-mode">
+        <option value="date" ${state.viewMode==="date"?"selected":""}>Date</option>
+        <option value="group" ${state.viewMode==="group"?"selected":""}>Group</option>
+      </select>
+    </div>
     <button class="clear-btn" id="clear-filters">Clear filters</button>
   </div>
   `;
+}
+
+function renderMatchCard(m){
+  const d = localDT(m);
+  const watchable = isWatchable(m);
+  const isKO = m.stage!=="Group Stage";
+  const utc = DT.fromISO(m.kickoffUtc,{zone:"utc"});
+
+  let rightControl;
+  if(state.mode==="manual"){
+    rightControl = `<label class="checkbox-wrap">
+      <input type="checkbox" data-match-id="${m.id}" ${watchable?"checked":""}>
+      I can watch this
+    </label>`;
+  }else{
+    rightControl = `<div class="watch-flag">
+      <span class="dot ${watchable?'watch':'miss'}"></span>
+      ${watchable?"Watchable":"Not watchable"}
+    </div>`;
+  }
+
+  return `
+  <div class="match-card ${isKO?'knockout':''}">
+    <div class="time-block">
+      <div class="time">${d.toFormat("HH:mm")}</div>
+      <div class="utc">UTC ${utc.toFormat("HH:mm")}</div>
+    </div>
+    <div class="teams">
+      <div class="vs">${m.home} vs ${m.away}</div>
+      <div class="venue">${m.stadium}, ${m.city}</div>
+    </div>
+    <span class="stage-badge ${isKO?'knockout':''}">${m.stage}${m.group?` · Group ${m.group}`:""}</span>
+    ${rightControl}
+  </div>`;
 }
 
 function renderMatchList(){
@@ -713,6 +895,7 @@ function renderMatchList(){
       const q = state.search.toLowerCase();
       if(!m.home.toLowerCase().includes(q) && !m.away.toLowerCase().includes(q)) return false;
     }
+    if(state.groupFilter!=="all" && m.group!==state.groupFilter) return false;
     if(state.stageFilter!=="all" && m.stage!==state.stageFilter) return false;
     if(state.cityFilter!=="all" && m.city!==state.cityFilter) return false;
     const d = localDT(m).toISODate();
@@ -725,45 +908,46 @@ function renderMatchList(){
     return `<div class="empty-msg">No matches found for these filters. Try clearing them.</div>`;
   }
 
+  if(state.viewMode==="group"){
+    let html = "";
+    GROUPS.forEach(g=>{
+      const groupMatches = list.filter(m=>m.group===g)
+        .sort((a,b)=>a.kickoffUtc.localeCompare(b.kickoffUtc));
+      if(!groupMatches.length) return;
+      html += `<div class="date-heading">Group ${g}</div>`;
+      groupMatches.forEach(m=>{ html += renderMatchCard(m); });
+    });
+
+    const koMatches = list.filter(m=>m.group===null);
+    if(koMatches.length){
+      html += `<div class="date-heading">Knockout Stage</div>`;
+      STAGES.filter(s=>s!=="Group Stage").forEach(stage=>{
+        const stageMatches = koMatches.filter(m=>m.stage===stage)
+          .sort((a,b)=>a.kickoffUtc.localeCompare(b.kickoffUtc));
+        if(!stageMatches.length) return;
+        html += `<div class="date-heading" style="border-bottom:none;font-size:.85rem;color:var(--muted);margin-top:14px;">${stage}</div>`;
+        stageMatches.forEach(m=>{ html += renderMatchCard(m); });
+      });
+    }
+
+    if(!html){
+      return `<div class="empty-msg">No matches found for these filters. Try clearing them.</div>`;
+    }
+    return html;
+  }
+
+  // Date view (default) - sort by converted local datetime, earliest first
+  const sortedList = [...list].sort((a,b)=>localDT(a).toMillis() - localDT(b).toMillis());
   let html = "";
   let lastDate = null;
-  list.forEach(m=>{
+  sortedList.forEach(m=>{
     const d = localDT(m);
     const dateKey = d.toFormat("cccc, d LLLL yyyy");
     if(dateKey!==lastDate){
       html += `<div class="date-heading">${dateKey}</div>`;
       lastDate = dateKey;
     }
-    const watchable = isWatchable(m);
-    const isKO = m.stage!=="Group Stage";
-    const utc = DT.fromISO(m.kickoffUtc,{zone:"utc"});
-
-    let rightControl;
-    if(state.mode==="manual"){
-      rightControl = `<label class="checkbox-wrap">
-        <input type="checkbox" data-match-id="${m.id}" ${watchable?"checked":""}>
-        I can watch this
-      </label>`;
-    }else{
-      rightControl = `<div class="watch-flag">
-        <span class="dot ${watchable?'watch':'miss'}"></span>
-        ${watchable?"Watchable":"Not watchable"}
-      </div>`;
-    }
-
-    html += `
-    <div class="match-card ${isKO?'knockout':''}">
-      <div class="time-block">
-        <div class="time">${d.toFormat("HH:mm")}</div>
-        <div class="utc">UTC ${utc.toFormat("HH:mm")}</div>
-      </div>
-      <div class="teams">
-        <div class="vs">${m.home} vs ${m.away}</div>
-        <div class="venue">${m.stadium}, ${m.city}</div>
-      </div>
-      <span class="stage-badge ${isKO?'knockout':''}">${m.stage}${m.group?` · Group ${m.group}`:""}</span>
-      ${rightControl}
-    </div>`;
+    html += renderMatchCard(m);
   });
   return html;
 }
@@ -814,6 +998,9 @@ function attachListeners(){
   const tzSel = document.getElementById("tz-select");
   if(tzSel) tzSel.addEventListener("change", e=>{ state.tzOffset = parseInt(e.target.value,10); render(); });
 
+  const watchThresholdSel = document.getElementById("watch-threshold-select");
+  if(watchThresholdSel) watchThresholdSel.addEventListener("change", e=>{ state.minWatchThreshold = parseInt(e.target.value,10); render(); });
+
   document.querySelectorAll(".mode-card").forEach(card=>{
     card.addEventListener("click", ()=>{
       const m = card.getAttribute("data-mode");
@@ -840,6 +1027,26 @@ function attachListeners(){
     });
   });
 
+  const presetWake = document.getElementById("preset-wake");
+  if(presetWake) presetWake.addEventListener("change", e=>{
+    if(state.mode==="early") state.editableEarly.wake = e.target.value;
+    else if(state.mode==="late") state.editableLate.wake = e.target.value;
+    render();
+  });
+
+  const presetSleep = document.getElementById("preset-sleep");
+  if(presetSleep) presetSleep.addEventListener("change", e=>{
+    if(state.mode==="early") state.editableEarly.sleep = e.target.value;
+    else if(state.mode==="late") state.editableLate.sleep = e.target.value;
+    render();
+  });
+
+  const viewModeSel = document.getElementById("view-mode");
+  if(viewModeSel) viewModeSel.addEventListener("change", e=>{ state.viewMode = e.target.value; render(); });
+
+  const groupFilter = document.getElementById("group-filter");
+  if(groupFilter) groupFilter.addEventListener("change", e=>{ state.groupFilter = e.target.value; render(); });
+
   const searchInput = document.getElementById("search-input");
   if(searchInput) searchInput.addEventListener("input", e=>{ state.search = e.target.value; render(); });
 
@@ -857,7 +1064,8 @@ function attachListeners(){
 
   const clearBtn = document.getElementById("clear-filters");
   if(clearBtn) clearBtn.addEventListener("click", ()=>{
-    state.search=""; state.stageFilter="all"; state.cityFilter="all"; state.dateFrom=""; state.dateTo="";
+    state.search=""; state.stageFilter="all"; state.cityFilter="all"; state.groupFilter="all";
+    state.dateFrom=""; state.dateTo=""; state.viewMode="date";
     render();
   });
 
