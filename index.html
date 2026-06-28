@@ -457,22 +457,22 @@ const rawMatches = [
 [71,"Panama","England","2026-06-27T21:00:00Z","MetLife Stadium","New York/New Jersey","Group Stage","L"],
 [72,"Croatia","Ghana","2026-06-27T21:00:00Z","Lincoln Financial Field","Philadelphia","Group Stage","L"],
 
-[73,"TBD","TBD","2026-06-28T19:00:00Z","SoFi Stadium","Los Angeles","Round of 32",null],
-[74,"TBD","TBD","2026-06-29T17:00:00Z","NRG Stadium","Houston","Round of 32",null],
-[75,"TBD","TBD","2026-06-29T20:30:00Z","Gillette Stadium","Boston","Round of 32",null],
-[76,"TBD","TBD","2026-06-30T01:00:00Z","Estadio BBVA","Monterrey","Round of 32",null],
-[77,"TBD","TBD","2026-06-30T17:00:00Z","AT&T Stadium","Dallas","Round of 32",null],
-[78,"TBD","TBD","2026-06-30T21:00:00Z","MetLife Stadium","New York/New Jersey","Round of 32",null],
-[79,"TBD","TBD","2026-07-01T01:00:00Z","Estadio Azteca","Mexico City","Round of 32",null],
-[80,"TBD","TBD","2026-07-01T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Round of 32",null],
-[81,"TBD","TBD","2026-07-01T20:00:00Z","Lumen Field","Seattle","Round of 32",null],
-[82,"TBD","TBD","2026-07-02T00:00:00Z","Levi's Stadium","San Francisco Bay Area","Round of 32",null],
-[83,"TBD","TBD","2026-07-02T19:00:00Z","SoFi Stadium","Los Angeles","Round of 32",null],
-[84,"TBD","TBD","2026-07-02T23:00:00Z","BMO Field","Toronto","Round of 32",null],
-[85,"TBD","TBD","2026-07-03T03:00:00Z","BC Place","Vancouver","Round of 32",null],
-[86,"TBD","TBD","2026-07-03T18:00:00Z","AT&T Stadium","Dallas","Round of 32",null],
-[87,"TBD","TBD","2026-07-03T22:00:00Z","Hard Rock Stadium","Miami","Round of 32",null],
-[88,"TBD","TBD","2026-07-04T01:30:00Z","Arrowhead Stadium","Kansas City","Round of 32",null],
+[73,"South Africa","Canada","2026-06-28T19:00:00Z","SoFi Stadium","Los Angeles","Round of 32",null],
+[74,"Brazil","Japan","2026-06-29T17:00:00Z","NRG Stadium","Houston","Round of 32",null],
+[75,"Germany","Paraguay","2026-06-29T20:30:00Z","Gillette Stadium","Boston","Round of 32",null],
+[76,"Netherlands","Morocco","2026-06-30T01:00:00Z","Estadio BBVA","Monterrey","Round of 32",null],
+[77,"Ivory Coast","Norway","2026-06-30T17:00:00Z","AT&T Stadium","Dallas","Round of 32",null],
+[78,"France","Sweden","2026-06-30T21:00:00Z","MetLife Stadium","New York/New Jersey","Round of 32",null],
+[79,"Mexico","Ecuador","2026-07-01T01:00:00Z","Estadio Azteca","Mexico City","Round of 32",null],
+[80,"England","DR Congo","2026-07-01T16:00:00Z","Mercedes-Benz Stadium","Atlanta","Round of 32",null],
+[81,"Belgium","Senegal","2026-07-01T20:00:00Z","Lumen Field","Seattle","Round of 32",null],
+[82,"USA","Bosnia and Herzegovina","2026-07-02T00:00:00Z","Levi's Stadium","San Francisco Bay Area","Round of 32",null],
+[83,"Spain","Austria","2026-07-02T17:00:00Z","SoFi Stadium","Los Angeles","Round of 32",null],
+[84,"Switzerland","South Korea","2026-07-02T21:00:00Z","BC Place","Vancouver","Round of 32",null],
+[85,"Colombia","Ghana","2026-07-03T03:00:00Z","BMO Field","Toronto","Round of 32",null],
+[86,"Australia","Egypt","2026-07-03T18:00:00Z","AT&T Stadium","Dallas","Round of 32",null],
+[87,"Argentina","Cape Verde","2026-07-03T22:00:00Z","Hard Rock Stadium","Miami","Round of 32",null],
+[88,"Croatia","Portugal","2026-07-04T01:30:00Z","Arrowhead Stadium","Kansas City","Round of 32",null],
 
 [89,"TBD","TBD","2026-07-04T17:00:00Z","NRG Stadium","Houston","Round of 16",null],
 [90,"TBD","TBD","2026-07-04T21:00:00Z","Lincoln Financial Field","Philadelphia","Round of 16",null],
@@ -968,7 +968,10 @@ function renderSummary(){
 
   const fmt = m => {
     const d = localDT(m);
-    return `<li><span>${m.home} vs ${m.away}</span>, ${d.toFormat("EEE d LLL, HH:mm")} (${m.stage})</li>`;
+    const matchup = m.home==="TBD" && m.away==="TBD"
+      ? `To be confirmed (${m.stage})`
+      : `${m.home} vs ${m.away}`;
+    return `<li><span>${matchup}</span>, ${d.toFormat("EEE d LLL, HH:mm")} (${m.stage})</li>`;
   };
 
   const futureBanner = state.excludeCompleted && completedCount > 0
@@ -1093,7 +1096,7 @@ function renderMatchCard(m){
       <div class="utc">UTC ${utc.toFormat("HH:mm")}</div>
     </div>
     <div class="teams">
-      <div class="vs">${m.home} vs ${m.away}</div>
+      <div class="vs">${m.home==="TBD" && m.away==="TBD" ? `To be confirmed (${m.stage})` : m.home==="TBD" ? `TBC vs ${m.away}` : m.away==="TBD" ? `${m.home} vs TBC` : `${m.home} vs ${m.away}`}</div>
       <div class="venue">${m.stadium}, ${m.city}</div>
     </div>
     <span class="stage-badge ${isKO?'knockout':''}">${m.stage}${m.group?` · Group ${m.group}`:""}</span>
@@ -1105,7 +1108,9 @@ function renderMatchList(){
   let list = MATCHES.filter(m=>{
     if(state.search){
       const q = state.search.toLowerCase();
-      if(!m.home.toLowerCase().includes(q) && !m.away.toLowerCase().includes(q)) return false;
+      const homeName = m.home==="TBD" ? "" : m.home.toLowerCase();
+      const awayName = m.away==="TBD" ? "" : m.away.toLowerCase();
+      if(!homeName.includes(q) && !awayName.includes(q)) return false;
     }
     if(state.groupFilter!=="all" && m.group!==state.groupFilter) return false;
     if(state.stageFilter!=="all" && m.stage!==state.stageFilter) return false;
