@@ -1331,7 +1331,39 @@ function attachListeners(){
   });
 }
 
-render();
+// ── LIVE FIXTURE LOADER ───────────────────────────────────────────────────────
+// On startup, fetch latest-fixtures.json (committed daily by GitHub Actions).
+// Patch the in-memory MATCHES array with confirmed knockout team names, then
+// render. Falls back silently to the embedded data if the file is unavailable
+// (e.g. opening index.html directly from disk).
+
+function applyLiveFixtures(fixtureList) {
+  if (!Array.isArray(fixtureList)) return;
+  const byId = Object.fromEntries(MATCHES.map(m => [m.id, m]));
+  fixtureList.forEach(f => {
+    const match = byId[f.id];
+    if (!match) return;
+    if (f.home) match.home = f.home;
+    if (f.away) match.away = f.away;
+  });
+}
+
+async function init() {
+  try {
+    const resp = await fetch('latest-fixtures.json', { cache: 'no-cache' });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && Array.isArray(data.fixtures)) {
+        applyLiveFixtures(data.fixtures);
+      }
+    }
+  } catch (e) {
+    // File unavailable or opened as file:// — use embedded data
+  }
+  render();
+}
+
+init();
 </script>
 </body>
 </html>
