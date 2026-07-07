@@ -1,40 +1,168 @@
 {
   "_meta": {
     "description": "Knockout stage participants for FIFA World Cup 2026. Updated daily by GitHub Actions. Do not edit manually.",
-    "lastSynced": "2026-07-04T09:00:00Z"
+    "lastSynced": "2026-07-07T06:08:08.139Z"
   },
   "fixtures": [
-    { "id": 73,  "home": "South Africa",          "away": "Canada" },
-    { "id": 74,  "home": "Brazil",                 "away": "Japan" },
-    { "id": 75,  "home": "Germany",                "away": "Paraguay" },
-    { "id": 76,  "home": "Netherlands",            "away": "Morocco" },
-    { "id": 77,  "home": "Ivory Coast",            "away": "Norway" },
-    { "id": 78,  "home": "France",                 "away": "Sweden" },
-    { "id": 79,  "home": "Mexico",                 "away": "Ecuador" },
-    { "id": 80,  "home": "England",                "away": "DR Congo" },
-    { "id": 81,  "home": "Belgium",                "away": "Senegal" },
-    { "id": 82,  "home": "USA",                    "away": "Bosnia and Herzegovina" },
-    { "id": 83,  "home": "Spain",                  "away": "Austria" },
-    { "id": 84,  "home": "Portugal",               "away": "Croatia" },
-    { "id": 85,  "home": "Switzerland",            "away": "Algeria" },
-    { "id": 86,  "home": "Australia",              "away": "Egypt" },
-    { "id": 87,  "home": "Argentina",              "away": "Cape Verde" },
-    { "id": 88,  "home": "Colombia",               "away": "Ghana" },
-    { "id": 89,  "home": "Canada",                 "away": "Morocco" },
-    { "id": 90,  "home": "Paraguay",               "away": "France" },
-    { "id": 91,  "home": "Brazil",                 "away": "Norway" },
-    { "id": 92,  "home": "Mexico",                 "away": "England" },
-    { "id": 93,  "home": "Portugal",               "away": "Spain" },
-    { "id": 94,  "home": "USA",                    "away": "Belgium" },
-    { "id": 95,  "home": "Argentina",              "away": "Egypt" },
-    { "id": 96,  "home": "Switzerland",            "away": "Colombia" },
-    { "id": 97,  "home": "TBD",                    "away": "TBD" },
-    { "id": 98,  "home": "TBD",                    "away": "TBD" },
-    { "id": 99,  "home": "TBD",                    "away": "TBD" },
-    { "id": 100, "home": "TBD",                    "away": "TBD" },
-    { "id": 101, "home": "TBD",                    "away": "TBD" },
-    { "id": 102, "home": "TBD",                    "away": "TBD" },
-    { "id": 103, "home": "TBD",                    "away": "TBD" },
-    { "id": 104, "home": "TBD",                    "away": "TBD" }
+    {
+      "id": 73,
+      "home": "South Africa",
+      "away": "Canada"
+    },
+    {
+      "id": 74,
+      "home": "Brazil",
+      "away": "Japan"
+    },
+    {
+      "id": 75,
+      "home": "Germany",
+      "away": "Paraguay"
+    },
+    {
+      "id": 76,
+      "home": "Netherlands",
+      "away": "Morocco"
+    },
+    {
+      "id": 77,
+      "home": "Ivory Coast",
+      "away": "Norway"
+    },
+    {
+      "id": 78,
+      "home": "France",
+      "away": "Sweden"
+    },
+    {
+      "id": 79,
+      "home": "Mexico",
+      "away": "Ecuador"
+    },
+    {
+      "id": 80,
+      "home": "England",
+      "away": "DR Congo"
+    },
+    {
+      "id": 81,
+      "home": "Belgium",
+      "away": "Senegal"
+    },
+    {
+      "id": 82,
+      "home": "USA",
+      "away": "Bosnia and Herzegovina"
+    },
+    {
+      "id": 83,
+      "home": "Spain",
+      "away": "Austria"
+    },
+    {
+      "id": 84,
+      "home": "Portugal",
+      "away": "Croatia"
+    },
+    {
+      "id": 85,
+      "home": "Switzerland",
+      "away": "Algeria"
+    },
+    {
+      "id": 86,
+      "home": "Australia",
+      "away": "Egypt"
+    },
+    {
+      "id": 87,
+      "home": "Argentina",
+      "away": "Cape Verde Islands"
+    },
+    {
+      "id": 88,
+      "home": "Colombia",
+      "away": "Ghana"
+    },
+    {
+      "id": 89,
+      "home": "Canada",
+      "away": "Morocco"
+    },
+    {
+      "id": 90,
+      "home": "Paraguay",
+      "away": "France"
+    },
+    {
+      "id": 91,
+      "home": "Brazil",
+      "away": "Norway"
+    },
+    {
+      "id": 92,
+      "home": "Mexico",
+      "away": "England"
+    },
+    {
+      "id": 93,
+      "home": "Portugal",
+      "away": "Spain"
+    },
+    {
+      "id": 94,
+      "home": "USA",
+      "away": "Belgium"
+    },
+    {
+      "id": 95,
+      "home": "Argentina",
+      "away": "Egypt"
+    },
+    {
+      "id": 96,
+      "home": "Switzerland",
+      "away": "Colombia"
+    },
+    {
+      "id": 97,
+      "home": "France",
+      "away": "Morocco"
+    },
+    {
+      "id": 98,
+      "home": "TBD",
+      "away": "TBD"
+    },
+    {
+      "id": 99,
+      "home": "Norway",
+      "away": "England"
+    },
+    {
+      "id": 100,
+      "home": "TBD",
+      "away": "TBD"
+    },
+    {
+      "id": 101,
+      "home": "TBD",
+      "away": "TBD"
+    },
+    {
+      "id": 102,
+      "home": "TBD",
+      "away": "TBD"
+    },
+    {
+      "id": 103,
+      "home": "TBD",
+      "away": "TBD"
+    },
+    {
+      "id": 104,
+      "home": "TBD",
+      "away": "TBD"
+    }
   ]
 }
