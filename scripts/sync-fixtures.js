@@ -27,8 +27,9 @@ const path  = require('path');
 
 const FIXTURES_PATH = path.join(__dirname, '..', 'latest-fixtures.json');
 
-// football-data.org competition ID for FIFA World Cup 2026
-const COMPETITION_ID = 2000;
+// football-data.org competition code for FIFA World Cup
+// Use 'WC' code — more reliable than numeric ID which changes per edition
+const COMPETITION_CODE = 'WC';
 
 // Knockout rounds as returned by football-data.org
 const KNOCKOUT_ROUNDS = [
@@ -130,7 +131,10 @@ function loadExisting() {
 // ── FETCH ─────────────────────────────────────────────────────────────────────
 
 async function fetchMatches(apiKey) {
-  const url = `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?stage=KNOCKOUT`;
+  // Fetch all matches for the competition — filtering by stage server-side
+  // is unreliable on football-data.org for tournaments mid-flight.
+  // We filter to knockout stages locally below.
+  const url = `https://api.football-data.org/v4/competitions/${COMPETITION_CODE}/matches`;
   log('Fetching: ' + url);
   let data;
   try {
@@ -141,15 +145,24 @@ async function fetchMatches(apiKey) {
   if (!data.matches || !Array.isArray(data.matches)) {
     fail('Unexpected response shape — missing matches array');
   }
-  log('API returned ' + data.matches.length + ' knockout matches');
-  return data.matches;
+  log('API returned ' + data.matches.length + ' total matches');
+
+  // Filter to knockout rounds only
+  const knockoutStages = new Set([
+    'ROUND_OF_32', 'ROUND_OF_16', 'QUARTER_FINALS',
+    'SEMI_FINALS', 'THIRD_PLACE', 'FINAL',
+  ]);
+  const knockout = data.matches.filter(m => knockoutStages.has(m.stage));
+  log('Knockout matches found: ' + knockout.length);
+  return knockout;
 }
 
 // ── VALIDATE ──────────────────────────────────────────────────────────────────
 
 function validate(matches) {
-  if (matches.length < 32) {
-    fail(`Only ${matches.length} knockout fixtures returned (expected ≥32). Aborting to protect existing data.`);
+  // We expect at least 16 — the API may not list all 32 until they're scheduled
+  if (matches.length < 16) {
+    fail(`Only ${matches.length} knockout fixtures returned (expected ≥16). Aborting to protect existing data.`);
   }
   const ok = matches.every(m => m.utcDate && m.homeTeam && m.awayTeam);
   if (!ok) fail('One or more fixtures missing required fields (utcDate, homeTeam, awayTeam)');
