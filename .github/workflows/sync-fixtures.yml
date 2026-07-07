@@ -16,11 +16,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Run fixture sync
         env:
-          API_FOOTBALL_DATA_KEY: ${{ secrets.API_FOOTBALL_DATA_KEY }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: node scripts/sync-fixtures.js
 
       - name: Commit if changed
