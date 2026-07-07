@@ -20,7 +20,7 @@ jobs:
 
       - name: Run fixture sync
         env:
-          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          API_FOOTBALL_DATA_KEY: ${{ secrets.API_FOOTBALL_DATA_KEY }}
         run: node scripts/sync-fixtures.js
 
       - name: Commit if changed
