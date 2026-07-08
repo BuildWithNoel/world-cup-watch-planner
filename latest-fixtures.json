@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Knockout stage participants for FIFA World Cup 2026. Updated daily by GitHub Actions. Do not edit manually.",
-    "lastSynced": "2026-07-07T11:54:25.069Z"
+    "lastSynced": "2026-07-08T11:08:17.598Z"
   },
   "fixtures": [
     {
@@ -141,8 +141,8 @@
     },
     {
       "id": 100,
-      "home": "TBD",
-      "away": "TBD"
+      "home": "Argentina",
+      "away": "Switzerland"
     },
     {
       "id": 101,
